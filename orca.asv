@@ -1,0 +1,15 @@
+function [X,Y,VX,VY] = orca(Pos,Vel,oth_Pos,oth_Vel,deltaT)
+
+r = 0.1; % Radius of each agent
+
+for i = 1:size(oth_Pos)
+    % Transform coordinate system into velocity domain
+    p_hat_B = (oth_Pos(i,:) - Pos')/deltaT;
+    r_hat_B = 2*r/deltaT;
+    v_AB = Vel' - oth_Vel(i,:);
+    C, u = FindVO(p_hat_B,r_hat_B,v_AB);
+end
+
+[X,Y,VX,VY] =deal(0,0,0,0);
+end
+
