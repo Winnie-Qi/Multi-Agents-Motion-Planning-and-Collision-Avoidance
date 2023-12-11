@@ -1,5 +1,5 @@
 % Author: Weijie Qi
-% Date: 02/2023
+% Date: 12/2023
 
 clc
 clear all
@@ -124,7 +124,7 @@ for t = 0.02:0.02:20
             oth_Pos = cur_Pos([1:i-1, i+1:end], :);
             oth_Vel = cur_Vel([1:i-1, i+1:end], :);
             deltaT = Pos{i}(1,idx+1) - Pos{i}(1,idx);
-            [Pos{i}(2, idx), Pos{i}(3, idx), Vel{i}(2, idx), Vel{i}(3, idx)] = orca(Pos{i}(2:3, idx), Vel{i}(2:3, idx),oth_Pos,oth_Vel,deltaT);
+            [Pos{i}(2, idx), Pos{i}(3, idx), Vel{i}(2, idx), Vel{i}(3, idx)] = orca(Pos{i}(2:3, idx)', Vel{i}(2:3, idx)',oth_Pos,oth_Vel,deltaT); % Ò»¶Ô¶à
             scatter(Pos{i}(2, idx), Pos{i}(3, idx), [], colors(i, :));
             cur_Pos(i,:) = Pos{i}(2:3, idx); 
             cur_Vel(i,:) = Vel{i}(2:3, idx); 
