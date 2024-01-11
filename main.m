@@ -59,15 +59,16 @@ if Manual
 %     [direction_x2,direction_y2] = ginput(1); 
 %     quiver(target_x,target_y,direction_x2-target_x,direction_y2-target_y,0,'b','LineWidth',1,'MaxHeadSize',1);
 else
-    n = 6;    
+    o = 6;    
     obstacles = {[3,8;2.5,7.3;3.5,7.3];[6.25,6.5;6.25,5;7.75,5;7.75,6.5];[2.5,4.5;1.7,3.8;2.1,3;2.9,3;3.3,3.8];...
         [1.5,6.5;1.5,6;2,6;2,6.5];[4.5,4;4.5,2.8;5.5,4];[7.5,2.5;7,1.5;8,1.5]};    
 %     [start_x, start_y, direction_x1,direction_y1] = deal(0.75,9.25,1.25,9);
 %     [target_x,target_y,direction_x2,direction_y2] = deal(9.2,0.25,9.8,0.25);
-    for i = 1:n        
+    for i = 1:o        
         plot(polyshape(obstacles{i}(:,1),obstacles{i}(:,2)),'FaceColor','b');
         hold on
     end
+    n = 3;
     locations = {[0.5,9.5;9.5,0.5],[4,1.5;9.5,9.5],[0.5,5;9.5,5]};
     plot([locations{1}(1,1),locations{2}(1,1),locations{3}(1,1)],[locations{1}(1,2),locations{2}(1,2),locations{3}(1,2)],'b.');
     plot([locations{1}(2,1),locations{2}(2,1),locations{3}(2,1)],[locations{1}(2,2),locations{2}(2,2),locations{3}(2,2)],'r.');   
@@ -90,10 +91,11 @@ pause(0.01)
 % 2nd column: the row index of the cells connected to this cell
 % 3rd column: the distances between this cell and its connected cells
 
-colors = parula(length(locations));
+states = zeros(n,2); % Record the switch between no collision and collision
+colors = parula(n);
 Pos = {};
 Vel = {};
-for i = 1:length(locations)
+for i = 1:n
     path = Dijkstra(locations{i}(1,1),locations{i}(1,2)); % path: the row index of the last cell that closest to the starting point from the current cell
     color = colors(i, :);
     path_points = find_path(path,locations{i}); % sequence of points that connect from the start point to the target point
@@ -105,30 +107,67 @@ for i = 1:length(locations)
 end
 
 % C=checkCollision(Pos);
-for i = 1:length(locations) % Round the time point to a multiple of 0.02
+for i = 1:n % Round the time point to a multiple of 0.02
     Pos{i}(1, :) = round(Pos{i}(1, :) / 0.02) * 0.02;    
 end
 
 % Save the last updated location and speed of each agent.
-cur_Pos = zeros(length(locations),2); 
-cur_Vel = zeros(length(locations),2);
-for i = 1:length(locations)
+cur_Pos = zeros(n,2); 
+cur_Vel = zeros(n,2);
+for i = 1:n
     cur_Pos(i,:) = locations{i}(1,:);    
 end
 
 % main loop
-for t = 0.02:0.02:20
-    for i = 1:length(locations)
-        if any(abs(Pos{i}(1, :) - t)<0.01)            
+for t = 0.02:0.02:30
+    for i = 1:n
+        if any(abs(Pos{i}(1, :) - t)<0.01)     
             idx = find(abs(Pos{i}(1, :) - t)<0.01);
+            if idx == size(Pos{i},2)
+                continue
+            end
+%             if idx == 89 && i == 1
+%                 a=1;
+%             end
             oth_Pos = cur_Pos([1:i-1, i+1:end], :);
             oth_Vel = cur_Vel([1:i-1, i+1:end], :);
             deltaT = Pos{i}(1,idx+1) - Pos{i}(1,idx);
-            [Pos{i}(2, idx), Pos{i}(3, idx), Vel{i}(2, idx), Vel{i}(3, idx)] = orca(Pos{i}(2:3, idx)', Vel{i}(2:3, idx)',oth_Pos,oth_Vel,deltaT); % 一对多
+%             [Pos{i}(2, idx), Pos{i}(3, idx), Vel{i}(2, idx), Vel{i}(3, idx)] = orca(Pos{i}(2:3, idx)', Vel{i}(2:3, idx)',oth_Pos,oth_Vel,deltaT); % 一对多
+            new_vel = orca(Pos{i}(2:3, idx)', Vel{i}(2:3, idx)',oth_Pos,oth_Vel,deltaT);
+            if new_vel % velocity has changed
+                Vel{i}(2:3, idx) = new_vel;
+%                 a = Pos{i}(2:3, idx+1);
+                Pos{i}(2:3, idx+1) = Pos{i}(2:3, idx) + new_vel' * deltaT;
+
+                
+%                 Vel{i}(2:3, idx+1) = (Pos{i}(2:3, idx+2) - Pos{i}(2:3, idx+1))/(Pos{i}(1,idx+2) - Pos{i}(1,idx+1));
+                states(i,1) = states(i,2);
+                states(i,2) = 1;
+            else
+                states(i,1) = states(i,2);
+                states(i,2) = 0;
+            end
+            
+            if isequal(states(i,:), [1 0])
+                gap = norm(Pos{i}(2:3, idx+1)-Pos{i}(2:3, idx));
+                if gap > 0.5
+                    deltaT = gap*2;
+                    [pos, vel] = minimum_jerk([Pos{i}(2:3, idx)';Pos{i}(2:3, idx+1)']);
+                    pos(1,:) = pos(1,:)/(20/deltaT)+ Pos{i}(1,idx);
+                    Pos{i}(1,idx+1:end) = Pos{i}(1,idx+1:end) + deltaT;
+                    Pos{i} = [Pos{i}(:, 1:idx), pos, Pos{i}(:, idx+1:end)];
+                    vel(1,:) = vel(1,:)/(20/deltaT)+ Pos{i}(1,idx);
+                    Vel{i}(1,idx+1:end) = Vel{i}(1,idx+1:end) + deltaT;
+                    Vel{i} = [Vel{i}(:, 1:idx), vel, Vel{i}(:, idx+1:end)];
+                end
+            end
+           
             scatter(Pos{i}(2, idx), Pos{i}(3, idx), [], colors(i, :));
             cur_Pos(i,:) = Pos{i}(2:3, idx); 
             cur_Vel(i,:) = Vel{i}(2:3, idx); 
             pause(0.01)
+            
+%             disp(states)
         else
             continue
         end

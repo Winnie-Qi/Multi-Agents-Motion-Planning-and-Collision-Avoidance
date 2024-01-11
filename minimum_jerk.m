@@ -1,7 +1,7 @@
 function [Pos,Vel] = minimum_jerk(path)
 
 % Define the time interval between points
-deltaT = 2;
+% deltaT = 2;
 % T = linspace(0, deltaT * (length(path) - 1), length(path));
 
 K = 3; % jerk is the 3rd derivative 
@@ -9,10 +9,10 @@ n_order = 2 * K - 1; % Polynomial order
 M = length(path) - 1; % The number of segments of the trajectory
 N = M * (n_order + 1); % The dimension of matrix Q
 
-Pos = [];
-Vel = [];
-distance = sqrt(sum(diff(path).^2, 2));
-relative_times = cumsum(distance / sum(distance)) * 20;
+Pos = []; % Initialize position
+Vel = []; % Initialize velocity
+distance = sqrt(sum(diff(path).^2, 2)); % Calculate distance between points
+relative_times = cumsum(distance / sum(distance)) * 20; 
 T = [0;relative_times];
 for k = 0:M-1
     t = linspace(T(k+1)+(T(k + 2)-T(k+1))/20, T(k + 2), 20);
@@ -23,11 +23,11 @@ end
 % Vel = [Vel, 20];
 
 for d = 1:2
-    x = path(:,d);
-    Q = zeros(N, N);
+    x = path(:,d); % Extract x or y coordinates
+    Q = zeros(N, N); % Initialize Q matrix
     for k = 1:M
-        Qk = getQk(T(k), T(k + 1));
-        Q(6 * (k - 1) + 1:6 * k, 6 * (k - 1) + 1:6 * k) = Qk;
+        Qk = getQk(T(k), T(k + 1)); % Calculate Qk matrix for each segment
+        Q(6 * (k - 1) + 1:6 * k, 6 * (k - 1) + 1:6 * k) = Qk; % Assign Qk to Q matrix
     end
     Q = 2 * Q; % The standard objective function is 1/2xTQx + qTx, so Q need to multiply by 2
 
@@ -45,8 +45,8 @@ for d = 1:2
             A0(2 + k*2, (M - 1) * 6 +i+1) = c * T(M+1)^(i - k);
         end
     end
-    b0(1) = x(1);
-    b0(2) = x(M + 1);
+    b0(1) = x(1); % Set initial position constraint
+    b0(2) = x(M + 1); % Set final position constraint
 
     % Add an initial position constraint for each trajectory
     for m = 1:M-1

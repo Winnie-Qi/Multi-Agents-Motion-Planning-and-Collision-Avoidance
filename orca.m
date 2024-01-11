@@ -1,8 +1,8 @@
-function [X,Y,VX,VY] = orca(Pos,Vel,oth_Pos,oth_Vel,deltaT)
+function new_vel = orca(Pos,Vel,oth_Pos,oth_Vel,deltaT)
 
-r = 0.15; % Radius of each agent
+r = 0.25; % Radius of each agent
 
-
+new_vel = 0;
 C = [];
 V = [];
 N = [];
@@ -32,9 +32,9 @@ else
         oth_point = V([1:C(i)-1, C(i)+1:end],:);
         oth_diretion = N([1:C(i)-1, C(i)+1:end],:);
         [left_dist, right_dist] = line_halfplane_intersect(line_point,line_direction,oth_point,oth_diretion);
-        Vel = point_line_project(line_point,line_direction, Vel, left_dist, right_dist);
-    end
-    Pos = 1;
+        new_vel = point_line_project(line_point,line_direction, Vel, left_dist, right_dist);
+        
+    end    
 end
 end
 
